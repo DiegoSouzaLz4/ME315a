@@ -1,0 +1,139 @@
+---
+title: "Lab04_DiegoLeite"
+format: pdf
+editor: visual
+---
+
+## 
+
+#### Q1. Carregar os pacotes readxl e tidyverse
+
+```{r}
+#| output: false
+library(readxl)
+library(tidyverse)
+```
+
+#### Q2. Caminho para o arquivo WDIEXCEL.xlsx
+
+```{r}
+fname <- "dados/WDIEXCEL.xlsx"
+file.exists(fname)
+```
+
+#### Q3. Ler a planilha "Country"
+
+```{r}
+countries <- read_excel(fname, sheet = "Country")
+```
+
+#### Q4. Manter apenas 5 países (Brasil + 4 outros)
+
+```{r}
+#| output: false
+#explorando o banco de dados para conhecer as colunas
+excel_sheets(fname)
+read_excel(fname, sheet = "Country", n_max = 0) %>% names()
+
+#Listando países
+countries_view <- read_excel(fname, sheet = "Country")
+countries_view %>%
+  select(`Country Code`, `Short Name`) %>%
+  print(n = Inf) 
+```
+
+Agora Mantendo os 5 países
+
+```{r}
+countries <- countries %>%
+  filter(`Country Code` %in% c("TUR", "SWE", "MEX", "CUB", "BRA"))
+```
+
+#### Q5. Ler a planilha "Data"
+
+```{r}
+WDI <- read_excel(fname, sheet = "Data")
+```
+
+#### Q6. Selecionar Country Code, Indicator Code e os anos de 1960-2018
+
+```{r}
+WDI <- WDI %>%
+  select('Country Code', 'Indicator Code', "1960":"2018")
+```
+
+#### Q7. Verificar formato tidy e transformar (pivot_longer)
+
+#### Os dados NÃO estão em formato tidy: cada ano é uma coluna, quando
+
+#### deveria ser uma observação (uma variável "YEAR" e uma variável de valor).
+
+```{r}
+#| output: false
+#verificando se está em formato tidy
+
+names(WDI)
+```
+
+```{r}
+WDI <- WDI %>%
+  pivot_longer(
+    cols = '1960':'2018',
+    names_to = "YEAR",
+    values_to = "VALUE"
+  )
+```
+
+#### Q8. Confirmar que YEAR está em formato inteiro
+
+```{r}
+class(WDI$YEAR)   
+
+WDI <- WDI %>%
+  mutate(YEAR = as.integer(YEAR))
+
+class(WDI$YEAR)   
+
+```
+
+#### Q9. Manter apenas os países de "countries" e selecionar as colunas pedidas
+
+#### Usa-se um inner_join (mutating join) para trazer "Short Name" de countries
+
+#### e simultaneamente filtrar o WDI apenas para os países de interesse.
+
+```{r}
+WDI <- WDI %>%
+  pivot_wider(names_from = `Indicator Code`, values_from = VALUE) %>%
+  inner_join(countries %>% select(`Country Code`, `Short Name`),
+             by = "Country Code") %>%
+  select(`Country Code`, `Short Name`, YEAR, SP.DYN.CBRT.IN)
+
+```
+
+#### Q10. Ordenar por país e, dentro de cada país, por ano
+
+```{r}
+WDI <- WDI %>%
+  arrange(`Country Code`, YEAR)
+```
+
+#### Q11. Gráfico de linhas: YEAR no eixo X, SP.DYN.CBRT.IN no eixo Y,uma linha por país
+
+```{r}
+ggplot(WDI, aes(x = YEAR, y = SP.DYN.CBRT.IN, color = `Short Name`)) +
+  geom_line() +
+  labs(
+    x = "Ano",
+    y = "Taxa Bruta de Natalidade",
+    color = "País",
+    title = "Taxa Bruta de Natalidade ao longo do tempo"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
